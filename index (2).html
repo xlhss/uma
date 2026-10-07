@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Links</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔗</text></svg>">
+<style>
+  :root {
+    --bg: #eef1f5;
+    --surface: #ffffff;
+    --ink: #17202e;
+    --muted: #5d6b7f;
+    --line: #d5dce6;
+    --accent: #2f5bea;
+    --hover: #e4e9f2;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #11161f;
+      --surface: #1a212d;
+      --ink: #e7ecf4;
+      --muted: #8d9bb0;
+      --line: #2a3342;
+      --accent: #7c9bff;
+      --hover: #232c3b;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #11161f;
+    --surface: #1a212d;
+    --ink: #e7ecf4;
+    --muted: #8d9bb0;
+    --line: #2a3342;
+    --accent: #7c9bff;
+    --hover: #232c3b;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 56px 24px 80px; }
+
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
+  h1 { margin: 0; font-size: 1.5rem; font-weight: 650; letter-spacing: -0.01em; }
+  #clock { color: var(--muted); font-variant-numeric: tabular-nums; font-size: .95rem; }
+
+  .search { position: relative; margin-bottom: 44px; }
+  .search input {
+    width: 100%;
+    font: inherit;
+    font-size: 1.15rem;
+    padding: 18px 64px 18px 20px;
+    border: 2px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--ink);
+    outline: none;
+  }
+  .search input:focus { border-color: var(--accent); }
+  .search kbd {
+    position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+    font: .8rem ui-monospace, monospace; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px;
+    pointer-events: none;
+  }
+  .hint { margin: 8px 4px 0; color: var(--muted); font-size: .85rem; min-height: 1.3em; }
+
+  #groups { columns: 3 280px; column-gap: 40px; }
+  section { break-inside: avoid; margin-bottom: 36px; }
+  h2 {
+    margin: 0 0 8px; padding-bottom: 8px;
+    font-size: 1rem; font-weight: 650;
+    border-bottom: 1px solid var(--line);
+  }
+  ul { list-style: none; margin: 0; padding: 0; }
+  a.link {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 10px; margin: 0 -10px;
+    border-radius: 8px;
+    color: var(--ink); text-decoration: none;
+  }
+  a.link:hover, a.link:focus-visible, a.link.first { background: var(--hover); }
+  a.link:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
+  a.link img { width: 20px; height: 20px; border-radius: 4px; flex: none; }
+  .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .host { color: var(--muted); font-size: .8rem; white-space: nowrap; }
+
+  .empty { color: var(--muted); }
+  footer { margin-top: 24px; display: flex; gap: 16px; color: var(--muted); font-size: .85rem; }
+  footer button {
+    font: inherit; color: inherit; background: none; border: 0; padding: 0;
+    cursor: pointer; text-decoration: underline;
+  }
+  footer button:hover { color: var(--ink); }
+
+  @media (max-width: 520px) {
+    .wrap { padding: 32px 16px 56px; }
+    .host { display: none; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    a.link { transition: background-color .12s; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 id="greeting">Links</h1>
+    <span id="clock"></span>
+  </header>
+
+  <div class="search">
+    <input id="q" type="search" placeholder="Search your links" autocomplete="off" autofocus aria-label="Search links">
+    <kbd>/</kbd>
+    <p class="hint" id="hint"></p>
+  </div>
+
+  <main id="groups"></main>
+
+  <footer>
+    <button id="theme" type="button">Switch theme</button>
+  </footer>
+</div>
+
+<script>
+/* ============================================================
+   EDIT THIS PART — add, remove or rename anything below.
+   Each group has a title and a list of [name, url] pairs.
+   ============================================================ */
+const GROUPS = [
+  {
+    title: "Work",
+    links: [
+      ["Gmail", "https://mail.google.com"],
+      ["Google Calendar", "https://calendar.google.com"],
+      ["Google Drive", "https://drive.google.com"],
+      ["Notion", "https://www.notion.so"],
+    ],
+  },
+  {
+    title: "Dev",
+    links: [
+      ["GitHub", "https://github.com"],
+      ["My repositories", "https://github.com?tab=repositories"],
+      ["Stack Overflow", "https://stackoverflow.com"],
+      ["MDN Web Docs", "https://developer.mozilla.org"],
+    ],
+  },
+  {
+    title: "AI",
+    links: [
+      ["Claude", "https://claude.ai"],
+      ["ChatGPT", "https://chatgpt.com"],
+    ],
+  },
+  {
+    title: "Media",
+    links: [
+      ["YouTube", "https://www.youtube.com"],
+      ["Spotify", "https://open.spotify.com"],
+    ],
+  },
+];
+
+/* Shown in the page header. Set to "" to just show "Links". */
+const YOUR_NAME = "";
+/* ============================================================ */
+
+const $ = (s) => document.querySelector(s);
+const host = (u) => new URL(u).hostname.replace(/^www\./, "");
+const icon = (u) => `https://www.google.com/s2/favicons?sz=64&domain=${host(u)}`;
+
+function render(filter = "") {
+  const f = filter.trim().toLowerCase();
+  const root = $("#groups");
+  root.innerHTML = "";
+  let firstUrl = null;
+  let count = 0;
+
+  for (const g of GROUPS) {
+    const matches = g.links.filter(([n, u]) =>
+      !f || n.toLowerCase().includes(f) || host(u).includes(f) || g.title.toLowerCase().includes(f)
+    );
+    if (!matches.length) continue;
+
+    const sec = document.createElement("section");
+    sec.innerHTML = `<h2></h2><ul></ul>`;
+    sec.querySelector("h2").textContent = g.title;
+    const ul = sec.querySelector("ul");
+
+    for (const [name, url] of matches) {
+      const li = document.createElement("li");
+      const a = document.createElement("a");
+      a.className = "link";
+      a.href = url;
+      a.rel = "noopener";
+      if (!firstUrl) { firstUrl = url; if (f) a.classList.add("first"); }
+      a.innerHTML = `<img alt="" loading="lazy"><span class="name"></span><span class="host"></span>`;
+      a.querySelector("img").src = icon(url);
+      a.querySelector(".name").textContent = name;
+      a.querySelector(".host").textContent = host(url);
+      li.append(a);
+      ul.append(li);
+      count++;
+    }
+    root.append(sec);
+  }
+
+  if (!count) root.innerHTML = `<p class="empty">No links match “${f.replace(/</g, "&lt;")}”.</p>`;
+  $("#hint").textContent = f && count ? "Press Enter to open the first result" : "";
+  return firstUrl;
+}
+
+let first = render();
+
+$("#q").addEventListener("input", (e) => { first = render(e.target.value); });
+$("#q").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && first) location.href = first;
+  if (e.key === "Escape") { e.target.value = ""; first = render(); }
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "/" && document.activeElement !== $("#q")) {
+    e.preventDefault();
+    $("#q").focus();
+  }
+});
+
+/* Greeting + clock */
+function tick() {
+  const d = new Date();
+  const h = d.getHours();
+  const part = h < 5 ? "Late night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+  $("#greeting").textContent = YOUR_NAME ? `${part}, ${YOUR_NAME}` : "Links";
+  $("#clock").textContent = d.toLocaleString([], { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+tick();
+setInterval(tick, 30000);
+
+/* Theme toggle (remembered per browser) */
+const root = document.documentElement;
+try { const t = localStorage.getItem("theme"); if (t) root.dataset.theme = t; } catch {}
+$("#theme").addEventListener("click", () => {
+  const dark = root.dataset.theme
+    ? root.dataset.theme === "dark"
+    : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("theme", root.dataset.theme); } catch {}
+});
+</script>
+</body>
+</html>
