@@ -48,32 +48,21 @@
     color: var(--ink);
     font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
-  .wrap { max-width: 1040px; margin: 0 auto; padding: 56px 24px 80px; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 40px 24px 80px; }
 
-  header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
-  h1 { margin: 0; font-size: 1.5rem; font-weight: 650; letter-spacing: -0.01em; }
-  #clock { color: var(--muted); font-variant-numeric: tabular-nums; font-size: .95rem; }
-
-  .search { position: relative; margin-bottom: 44px; }
-  .search input {
+  #banner {
+    display: none;
     width: 100%;
-    font: inherit;
-    font-size: 1.15rem;
-    padding: 18px 64px 18px 20px;
-    border: 2px solid var(--line);
-    border-radius: 12px;
-    background: var(--surface);
-    color: var(--ink);
-    outline: none;
+    height: 240px;
+    object-fit: cover;
+    border-radius: 14px;
+    margin-bottom: 32px;
   }
-  .search input:focus { border-color: var(--accent); }
-  .search kbd {
-    position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
-    font: .8rem ui-monospace, monospace; color: var(--muted);
-    border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px;
-    pointer-events: none;
-  }
-  .hint { margin: 8px 4px 0; color: var(--muted); font-size: .85rem; min-height: 1.3em; }
+  #banner.on { display: block; }
+
+  header { text-align: center; margin-bottom: 48px; }
+  h1 { margin: 0; font-size: 2rem; font-weight: 700; letter-spacing: -0.01em; }
+  #clock { display: block; margin-top: 4px; color: var(--muted); font-variant-numeric: tabular-nums; font-size: .95rem; }
 
   #groups { columns: 3 280px; column-gap: 40px; }
   section { break-inside: avoid; margin-bottom: 36px; }
@@ -89,14 +78,13 @@
     border-radius: 8px;
     color: var(--ink); text-decoration: none;
   }
-  a.link:hover, a.link:focus-visible, a.link.first { background: var(--hover); }
+  a.link:hover, a.link:focus-visible { background: var(--hover); }
   a.link:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
-  a.link img { width: 20px; height: 20px; border-radius: 4px; flex: none; }
+  a.link img { width: 22px; height: 22px; border-radius: 5px; object-fit: cover; flex: none; }
   .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .host { color: var(--muted); font-size: .8rem; white-space: nowrap; }
 
-  .empty { color: var(--muted); }
-  footer { margin-top: 24px; display: flex; gap: 16px; color: var(--muted); font-size: .85rem; }
+  footer { margin-top: 24px; text-align: center; color: var(--muted); font-size: .85rem; }
   footer button {
     font: inherit; color: inherit; background: none; border: 0; padding: 0;
     cursor: pointer; text-decoration: underline;
@@ -104,7 +92,9 @@
   footer button:hover { color: var(--ink); }
 
   @media (max-width: 520px) {
-    .wrap { padding: 32px 16px 56px; }
+    .wrap { padding: 20px 16px 56px; }
+    #banner { height: 150px; }
+    h1 { font-size: 1.6rem; }
     .host { display: none; }
   }
   @media (prefers-reduced-motion: no-preference) {
@@ -114,16 +104,12 @@
 </head>
 <body>
 <div class="wrap">
+  <img id="banner" alt="">
+
   <header>
-    <h1 id="greeting">Links</h1>
+    <h1 id="title">Links</h1>
     <span id="clock"></span>
   </header>
-
-  <div class="search">
-    <input id="q" type="search" placeholder="Search your links" autocomplete="off" autofocus aria-label="Search links">
-    <kbd>/</kbd>
-    <p class="hint" id="hint"></p>
-  </div>
 
   <main id="groups"></main>
 
@@ -134,9 +120,20 @@
 
 <script>
 /* ============================================================
-   EDIT THIS PART — add, remove or rename anything below.
-   Each group has a title and a list of [name, url] pairs.
+   EDIT THIS PART
    ============================================================ */
+
+/* Banner image at the top. Upload the image to your repo next to
+   index.html with this exact filename (or change the name here).
+   If the file doesn't exist, no banner is shown. */
+const BANNER_IMAGE = "banner.jpg";
+
+/* Centered page title. */
+const TITLE = "Links";
+
+/* Each link is [name, url] or [name, url, iconImage].
+   iconImage is optional: a filename in your repo or a full image URL.
+   Without it, the site's own icon is used. */
 const GROUPS = [
   {
     title: "Planning",
@@ -172,90 +169,65 @@ const GROUPS = [
     ],
   },
 ];
-
-/* Shown in the page header. Set to "" to just show "Links". */
-const YOUR_NAME = "";
 /* ============================================================ */
 
 const $ = (s) => document.querySelector(s);
 const host = (u) => new URL(u).hostname.replace(/^www\./, "");
-const icon = (u) => `https://www.google.com/s2/favicons?sz=64&domain=${host(u)}`;
+const autoIcon = (u) => `https://www.google.com/s2/favicons?sz=64&domain=${host(u)}`;
 
-function render(filter = "") {
-  const f = filter.trim().toLowerCase();
-  const root = $("#groups");
-  root.innerHTML = "";
-  let firstUrl = null;
-  let count = 0;
+/* Title + page tab name */
+$("#title").textContent = TITLE;
+document.title = TITLE;
 
-  for (const g of GROUPS) {
-    const matches = g.links.filter(([n, u]) =>
-      !f || n.toLowerCase().includes(f) || host(u).includes(f) || g.title.toLowerCase().includes(f)
-    );
-    if (!matches.length) continue;
-
-    const sec = document.createElement("section");
-    sec.innerHTML = `<h2></h2><ul></ul>`;
-    sec.querySelector("h2").textContent = g.title;
-    const ul = sec.querySelector("ul");
-
-    for (const [name, url] of matches) {
-      const li = document.createElement("li");
-      const a = document.createElement("a");
-      a.className = "link";
-      a.href = url;
-      a.rel = "noopener";
-      if (!firstUrl) { firstUrl = url; if (f) a.classList.add("first"); }
-      a.innerHTML = `<img alt="" loading="lazy"><span class="name"></span><span class="host"></span>`;
-      a.querySelector("img").src = icon(url);
-      a.querySelector(".name").textContent = name;
-      a.querySelector(".host").textContent = host(url);
-      li.append(a);
-      ul.append(li);
-      count++;
-    }
-    root.append(sec);
-  }
-
-  if (!count) root.innerHTML = `<p class="empty">No links match “${f.replace(/</g, "&lt;")}”.</p>`;
-  $("#hint").textContent = f && count ? "Press Enter to open the first result" : "";
-  return firstUrl;
+/* Banner */
+if (BANNER_IMAGE) {
+  const b = $("#banner");
+  b.onload = () => b.classList.add("on");
+  b.src = BANNER_IMAGE;
 }
 
-let first = render();
+/* Links */
+const root = $("#groups");
+for (const g of GROUPS) {
+  const sec = document.createElement("section");
+  sec.innerHTML = `<h2></h2><ul></ul>`;
+  sec.querySelector("h2").textContent = g.title;
+  const ul = sec.querySelector("ul");
 
-$("#q").addEventListener("input", (e) => { first = render(e.target.value); });
-$("#q").addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && first) location.href = first;
-  if (e.key === "Escape") { e.target.value = ""; first = render(); }
-});
-document.addEventListener("keydown", (e) => {
-  if (e.key === "/" && document.activeElement !== $("#q")) {
-    e.preventDefault();
-    $("#q").focus();
+  for (const [name, url, customIcon] of g.links) {
+    const li = document.createElement("li");
+    const a = document.createElement("a");
+    a.className = "link";
+    a.href = url;
+    a.rel = "noopener";
+    a.innerHTML = `<img alt="" loading="lazy"><span class="name"></span><span class="host"></span>`;
+    const img = a.querySelector("img");
+    img.src = customIcon || autoIcon(url);
+    if (customIcon) img.onerror = () => { img.onerror = null; img.src = autoIcon(url); };
+    a.querySelector(".name").textContent = name;
+    a.querySelector(".host").textContent = host(url);
+    li.append(a);
+    ul.append(li);
   }
-});
+  root.append(sec);
+}
 
-/* Greeting + clock */
+/* Clock */
 function tick() {
-  const d = new Date();
-  const h = d.getHours();
-  const part = h < 5 ? "Late night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
-  $("#greeting").textContent = YOUR_NAME ? `${part}, ${YOUR_NAME}` : "Links";
-  $("#clock").textContent = d.toLocaleString([], { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  $("#clock").textContent = new Date().toLocaleString([], { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
 }
 tick();
 setInterval(tick, 30000);
 
 /* Theme toggle (remembered per browser) */
-const root = document.documentElement;
-try { const t = localStorage.getItem("theme"); if (t) root.dataset.theme = t; } catch {}
+const docEl = document.documentElement;
+try { const t = localStorage.getItem("theme"); if (t) docEl.dataset.theme = t; } catch {}
 $("#theme").addEventListener("click", () => {
-  const dark = root.dataset.theme
-    ? root.dataset.theme === "dark"
+  const dark = docEl.dataset.theme
+    ? docEl.dataset.theme === "dark"
     : matchMedia("(prefers-color-scheme: dark)").matches;
-  root.dataset.theme = dark ? "light" : "dark";
-  try { localStorage.setItem("theme", root.dataset.theme); } catch {}
+  docEl.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("theme", docEl.dataset.theme); } catch {}
 });
 </script>
 </body>
